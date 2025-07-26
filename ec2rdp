@@ -1,0 +1,53 @@
+#!venv/bin/python
+
+import argparse
+import sys
+from main import (
+    list_ec2_instances,
+    start_ec2_instance,
+    stop_ec2_instance,
+    connect_rdp,
+    verify_credentials,
+    print_red
+)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Instance management script for AWS EC2.')
+    parser.add_argument('--list-instances', action='store_true', help='List all EC2 instances')
+    parser.add_argument('--start-instance', type=str, help='Start a specific EC2 instance by ID')
+    parser.add_argument('--stop-instance', type=str, help='Stop a specific EC2 instance')
+    parser.add_argument('--connect-rdp', type=str, help='Connect to an EC2 instance via RDP')
+    parser.add_argument('--username', type=str, default='Administrator', help='RDP username (default: Administrator)')
+    parser.add_argument('--autostop', action='store_true', help='Automatically stop instances after connecting via RDP')
+    parser.add_argument('--nowait', action='store_true', help='Do not wait for instance to stop after stopping it')
+    
+    args = parser.parse_args()
+    if len(sys.argv)==1:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
+    
+    if not verify_credentials():
+        print_red("Invalid AWS credentials. Please check your .env file.")
+        sys.exit(1)
+        
+    if args.list_instances:
+        list_ec2_instances()
+    elif args.start_instance:
+        if not args.start_instance:
+            print_red("Please provide an instance ID to start.")
+            sys.exit(1)
+        start_ec2_instance(args.start_instance)
+    elif args.stop_instance:
+        if not args.stop_instance:
+            print_red("Please provide an instance ID to stop.")
+            sys.exit(1)
+        stop_ec2_instance(args.stop_instance)
+    elif args.connect_rdp:
+        if not args.connect_rdp:
+            print_red("Please provide an instance ID to connect via RDP.")
+            sys.exit(1)
+        start_ec2_instance(args.connect_rdp)  # Ensure the instance is running before connecting
+        connect_rdp(args.connect_rdp)
+        if args.autostop:
+            stop_ec2_instance(args.connect_rdp, wait=not args.nowait)
